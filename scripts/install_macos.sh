@@ -218,8 +218,26 @@ if [[ -f "$LAUNCH_PY" ]]; then
   cat > "$ALIAS_PATH" <<EOF
 #!/bin/bash
 # Launches OpenLab Recorder: auto-detects OpenBCI dongle, opens LabRecorder, starts bridge.
-cd "$REPO"
-"$PYTHON" "$LAUNCH_PY"
+# The trap below keeps Terminal open on any exit so errors are readable
+# instead of the window vanishing instantly on a Python crash.
+trap 'rc=\$?; echo; echo "[exit code \$rc]"; echo "Press Enter to close..."; read -r _' EXIT
+
+REPO_DIR="$REPO"
+PYTHON_BIN="$PYTHON"
+LAUNCH_FILE="$LAUNCH_PY"
+
+echo "[launcher] repo:   \$REPO_DIR"
+echo "[launcher] python: \$PYTHON_BIN"
+echo "[launcher] script: \$LAUNCH_FILE"
+echo
+
+# Validate before invoking — friendlier than a raw exec failure.
+[ -d "\$REPO_DIR" ]      || { echo "[ERROR] Repo directory missing: \$REPO_DIR"; exit 10; }
+[ -x "\$PYTHON_BIN" ]    || { echo "[ERROR] Python not executable at: \$PYTHON_BIN"; exit 11; }
+[ -f "\$LAUNCH_FILE" ]   || { echo "[ERROR] launch.py missing at: \$LAUNCH_FILE"; exit 12; }
+
+cd "\$REPO_DIR"
+"\$PYTHON_BIN" "\$LAUNCH_FILE" "\$@"
 EOF
   chmod +x "$ALIAS_PATH"
   ok "Desktop launcher: $ALIAS_PATH"
