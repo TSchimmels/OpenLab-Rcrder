@@ -56,7 +56,21 @@ ok "macOS ${MACOS_VER} (arch: ${ARCH})"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 
-# ---------- 1. Homebrew ----------
+# ---------- 1a. Xcode Command Line Tools ----------
+# Homebrew formulae that build from source need cc / make from Xcode CLT.
+# Without CLT, brew sometimes silently no-ops mid-formula. Trigger Apple's
+# installer if missing; user gets a single GUI prompt.
+if xcode-select -p >/dev/null 2>&1; then
+  ok "Xcode Command Line Tools present at: $(xcode-select -p)"
+else
+  warn "Xcode Command Line Tools not installed. Triggering Apple installer..."
+  warn "A macOS dialog will appear. Click 'Install', wait for it to finish, then re-run INSTALL_macOS.command."
+  xcode-select --install || true
+  err "Re-run INSTALL_macOS.command after Xcode CLT install completes."
+  exit 1
+fi
+
+# ---------- 1b. Homebrew ----------
 if have brew; then
   ok "Homebrew already installed: $(brew --version | head -1)"
 else
@@ -133,6 +147,40 @@ if [[ -d "$VENDOR" ]]; then
 else
   warn "vendor/LabRecorder not found after install.py — Gatekeeper strip skipped."
 fi
+
+# ---------- 5b. Verify every runtime dependency actually imports ----------
+# pip install can succeed while runtime import fails — this is the exact
+# macOS pylsl failure mode (pip wheel installs but liblsl.dylib is missing).
+# Fail fast here so the friend doesn't discover it mid-recording session.
+ok "Verifying every runtime dependency imports cleanly..."
+VERIFY_OUTPUT=$("$PYTHON" - <<'PYEOF' 2>&1
+import importlib, sys
+checks = [
+    ("brainflow", "BrainFlow"),
+    ("pylsl",     "pylsl (needs liblsl native lib)"),
+    ("serial",    "pyserial"),
+    ("pyxdf",     "pyxdf"),
+]
+failed = []
+for mod, label in checks:
+    try:
+        importlib.import_module(mod)
+        print(f"  [ok]   {label}")
+    except Exception as e:
+        print(f"  [FAIL] {label}: {type(e).__name__}: {e}")
+        failed.append((mod, e))
+sys.exit(1 if failed else 0)
+PYEOF
+)
+echo "$VERIFY_OUTPUT"
+if echo "$VERIFY_OUTPUT" | grep -q "\[FAIL\]"; then
+  err "One or more runtime dependencies failed to import."
+  err "Most common cause on macOS: liblsl.dylib not found (pylsl install fails at import)."
+  err "Re-check the liblsl step above. If brew install labstreaminglayer/tap/lsl failed,"
+  err "the bridge will not run."
+  exit 6
+fi
+ok "All runtime dependencies verified."
 
 # ---------- 6. Desktop alias ----------
 DESKTOP="$HOME/Desktop"
