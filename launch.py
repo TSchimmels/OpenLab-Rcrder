@@ -82,13 +82,11 @@ def find_dongle_port() -> str | None:
 
 def main() -> int:
     board = sys.argv[1] if len(sys.argv) > 1 else "daisy"
-    port = find_dongle_port()
-    if not port:
-        print("No serial dongle found. Plug in the OpenBCI dongle and re-run.")
-        input("Press Enter to close...")
-        return 1
-    print(f"OpenBCI dongle: {port}  |  board: {board}")
 
+    # Open LabRecorder FIRST so the GUI is available regardless of dongle
+    # state. The dongle is needed only to feed the bridge; LabRecorder itself
+    # is useful with or without it (browse past .xdf recordings, configure
+    # study folder, see other LSL streams on the network).
     if LABRECORDER:
         print(f"Opening LabRecorder: {LABRECORDER.name}")
         launch_labrecorder(LABRECORDER)
@@ -96,6 +94,17 @@ def main() -> int:
     else:
         print(f"LabRecorder not found in vendor/ for platform {platform.system()} — run: python install.py")
 
+    port = find_dongle_port()
+    if not port:
+        print()
+        print("No serial dongle detected.")
+        print("LabRecorder is open and you can use it; the OpenBCI bridge is NOT running.")
+        print("Plug in the OpenBCI dongle and re-run this launcher to start streaming.")
+        print()
+        input("Press Enter to close this window (LabRecorder will keep running)...")
+        return 0
+
+    print(f"OpenBCI dongle: {port}  |  board: {board}")
     print("Starting stream. In LabRecorder, click Update, check 'OpenBCI_EEG', then Start.")
     print("Close this window or press Ctrl-C to stop streaming.\n")
     return subprocess.call([sys.executable, str(BRIDGE), "--port", port, "--board", board])
