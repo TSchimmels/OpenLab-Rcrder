@@ -1,6 +1,6 @@
 # install_windows.ps1 — one-click Windows installer for OpenLab Recorder.
 #
-# Called by INSTALL.bat in the repo root (which sets ExecutionPolicy Bypass).
+# Called by INSTALL_Windows.bat in the repo root (which sets ExecutionPolicy Bypass).
 # Can also be run directly:
 #     powershell -ExecutionPolicy Bypass -File scripts\install_windows.ps1
 #
@@ -33,7 +33,7 @@ if (-not $winget) {
     Write-Err "winget is not installed."
     Write-Err "On Windows 10 / 11 it ships with 'App Installer' from the Microsoft Store."
     Write-Err "Open Microsoft Store, search 'App Installer', install or update it,"
-    Write-Err "then re-run INSTALL.bat."
+    Write-Err "then re-run INSTALL_Windows.bat."
     exit 2
 }
 Write-Info "winget present: $((winget --version 2>$null))"
@@ -69,7 +69,7 @@ if (-not $python) {
     $python = Get-Python
     if (-not $python) {
         Write-Err "Python installed but still not on PATH for this shell."
-        Write-Err "Close this window, open a fresh PowerShell, and re-run INSTALL.bat."
+        Write-Err "Close this window, open a fresh PowerShell, and re-run INSTALL_Windows.bat."
         exit 4
     }
 }
