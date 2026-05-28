@@ -1,0 +1,10 @@
+# OpenBCI -> Lab Streaming Layer bridge dependencies.
+# NOT auto-installed. Install with: pip install -r requirements.txt
+# (pylsl needs the native liblsl library; on Windows the pip wheel bundles it,
+#  on Linux install liblsl separately, e.g. conda install -c conda-forge liblsl)
+
+brainflow>=5.10,<6.0
+pylsl>=1.16
+pyserial>=3.5
+pyxdf>=1.16
+
